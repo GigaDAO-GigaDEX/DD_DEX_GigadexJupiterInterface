@@ -1,5 +1,6 @@
 use solana_sdk::pubkey::Pubkey;
-
+use anchor_lang::prelude::*;
+use borsh::BorshSerialize;
 
 #[repr(C)]
 #[derive(Debug, Default, PartialEq)]
@@ -191,6 +192,64 @@ impl From<&[u8]> for OrderTree {
             num_deltas,
             node_delta,
             amount_cancelled,
+        }
+    }
+}
+
+
+#[derive(Default)]
+pub struct FeeMod {
+    pub base_fee_bp: u64,
+    pub collection_fee_bp: u64,
+    pub market_maker_fee_bp: u64,
+    pub dex_fee_bp: u64,
+    pub collection_royalty_address: Pubkey,
+}
+
+
+impl From<&[u8]> for FeeMod {
+    fn from(data: &[u8]) -> Self {
+        let base_fee_bp = u64::from_le_bytes(data[0..8].try_into().unwrap());
+        let collection_fee_bp = u64::from_le_bytes(data[8..16].try_into().unwrap());
+        let market_maker_fee_bp = u64::from_le_bytes(data[16..24].try_into().unwrap());
+        let dex_fee_bp = u64::from_le_bytes(data[24..32].try_into().unwrap());
+        let collection_royalty_address = Pubkey::new(&data[32..64]);
+
+        Self {
+            base_fee_bp,
+            collection_fee_bp,
+            market_maker_fee_bp,
+            dex_fee_bp,
+            collection_royalty_address,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct AdditionalPdaAccount {
+    pub price: u64,
+    // ! deprecated
+    pub mint: Pubkey,
+    pub multiplier: u64,
+    pub quote_mint: Pubkey,
+    pub fee_receiver_wallet: Pubkey,
+}
+
+
+impl From<&[u8]> for AdditionalPdaAccount {
+    fn from(data: &[u8]) -> Self {
+        let price = u64::from_le_bytes(data[0..8].try_into().unwrap());
+        let mint = Pubkey::new(&data[8..40]);
+        let multiplier = u64::from_le_bytes(data[40..48].try_into().unwrap());
+        let quote_mint = Pubkey::new(&data[48..80]);
+        let fee_receiver_wallet = Pubkey::new(&data[80..112]);
+
+        Self {
+            price,
+            mint,
+            multiplier,
+            quote_mint,
+            fee_receiver_wallet,
         }
     }
 }
