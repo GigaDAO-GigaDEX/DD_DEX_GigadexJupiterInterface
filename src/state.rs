@@ -54,19 +54,19 @@ impl Default for OrderTree {
 
 impl OrderTree {
     pub fn calculate_quote(&self, amount_in: u64, buy: bool) -> u64 {
-        let mut remaining_amount = amount_in;
-        let mut total_received = 0;
+        let mut remaining_amount = amount_in as f64;
+        let mut total_received = 0_f64;
 
         let mut root_idx = self.root_idx as usize;
-
-        while remaining_amount > 0 {
-            let best_price = self.get_best(root_idx);
-            if best_price == 0 {
+        while remaining_amount > 0_f64 {
+            let best_price = self.get_best(root_idx) as f64 / 1_000_000.0;
+            if best_price == 0_f64 {
                 return 0;
             }
 
             let order_node = self.get(root_idx);
-            let order_amount = order_node.amount;
+            let order_amount = order_node.amount as f64;
+
             if buy {
                 if order_amount * best_price > remaining_amount {
                     total_received += remaining_amount / best_price;
@@ -91,7 +91,8 @@ impl OrderTree {
         }
 
         // 1_000_000 is the precision of the market, constant across all markets
-        total_received / 1_000_000
+        println!("total received {}", total_received);
+        total_received as u64
     }
 
     fn get(&self, idx: usize) -> &Node {
@@ -106,7 +107,7 @@ impl OrderTree {
             if self.nodes[root_idx].left > 0 {
                 self.get_best(self.nodes[root_idx].left as usize)
             } else {
-                self.nodes[root_idx].price
+                self.nodes[root_idx].price //
             }
         } else {
             // get highest

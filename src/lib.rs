@@ -59,10 +59,6 @@ impl Amm for GigadexOBSwap {
     }
 
     fn get_accounts_to_update(&self) -> Vec<Pubkey> {
-        println!("asks {}", self.market.asks);
-        println!("bids {}", self.market.bids);
-        println!("fee_mod {}", get_fee_mod(self.key.clone()));
-        println!("additional_pda {}", get_additional_pda(self.key.clone()));
         vec![self.market.asks,
              self.market.bids,
              get_fee_mod(self.key.clone()),
@@ -76,10 +72,6 @@ impl Amm for GigadexOBSwap {
         let additional_pda_data = try_get_account_data(account_map, &get_additional_pda(self.key.clone())).unwrap();
         self.asks = OrderTree::deserialize(&mut &asks_data[8..]).unwrap();
         self.bids = OrderTree::deserialize(&mut &bids_data[8..]).unwrap();
-
-        println!("{}",self.asks.root_idx);
-        println!("{}",self.bids.root_idx);
-
 
         self.fee_mod = FeeMod::deserialize(&mut &fee_mod_data[8..])?;
         self.additional_pda = AdditionalPdaAccount::deserialize(&mut &additional_pda_data[8..])?;
@@ -100,11 +92,13 @@ impl Amm for GigadexOBSwap {
         };
 
         let mut amount_out = order_tree.calculate_quote(quote_params.in_amount, buy);
-        let fees = (amount_out as f64 * (self.fee_mod.base_fee_bp as f64 / 100_f64)) as u64;
+
+        let fees = (amount_out as f64 * (self.fee_mod.base_fee_bp as f64 / 1e4)) as u64;
+
         amount_out = amount_out - fees;
-        let enough_liquidity = amount_out > 0;
+        let not_enough_liquidity = amount_out == 0;
         let quote = Quote {
-            not_enough_liquidity: enough_liquidity,
+            not_enough_liquidity,
             min_in_amount: Some(quote_params.in_amount),
             min_out_amount: Some(amount_out),
             in_amount: quote_params.in_amount,
@@ -182,7 +176,7 @@ mod test {
         let mut openbook = GigadexOBSwap::from_keyed_account(&market_account).unwrap();
 
         let pubkeys = openbook.get_accounts_to_update();
-        println!("pubkeys: {:?}", pubkeys);
+
         let accounts: AccountMap = pubkeys
             .iter()
             .zip(rpc.get_multiple_accounts(&pubkeys).unwrap())
@@ -198,14 +192,13 @@ mod test {
         };
 
         let quote_params = QuoteParams {
-            in_amount: 80,
+            in_amount: 10000,
             input_mint: base_mint,
             output_mint: quote_mint,
         };
 
         let quote = openbook.quote(&quote_params).unwrap();
 
-        println!("{:#?}", quote_params);
         println!("{:#?}", quote);
 
         Ok(())
