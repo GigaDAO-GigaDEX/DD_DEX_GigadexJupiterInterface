@@ -61,15 +61,15 @@ impl Amm for GigadexOBSwap {
     fn get_accounts_to_update(&self) -> Vec<Pubkey> {
         vec![self.market.asks,
              self.market.bids,
-             get_fee_mod(self.key.clone()),
-             get_additional_pda(self.key.clone())]
+             get_fee_mod(self.key),
+             get_additional_pda(self.key)]
     }
 
     fn update(&mut self, account_map: &AccountMap) -> std::result::Result<(), anyhow::Error> {
         let bids_data = try_get_account_data(account_map, &self.market.bids).unwrap();
         let asks_data = try_get_account_data(account_map, &self.market.asks).unwrap();
-        let fee_mod_data = try_get_account_data(account_map, &get_fee_mod(self.key.clone())).unwrap();
-        let additional_pda_data = try_get_account_data(account_map, &get_additional_pda(self.key.clone())).unwrap();
+        let fee_mod_data = try_get_account_data(account_map, &get_fee_mod(self.key)).unwrap();
+        let additional_pda_data = try_get_account_data(account_map, &get_additional_pda(self.key)).unwrap();
         self.asks = OrderTree::deserialize(&mut &asks_data[8..]).unwrap();
         self.bids = OrderTree::deserialize(&mut &bids_data[8..]).unwrap();
 
@@ -79,11 +79,7 @@ impl Amm for GigadexOBSwap {
     }
 
     fn quote(&self, quote_params: &QuoteParams) -> std::result::Result<Quote, anyhow::Error> {
-        let buy = if quote_params.input_mint == self.market.quote_mint {
-            true
-        } else {
-            false
-        };
+        let buy = quote_params.input_mint == self.market.quote_mint;
 
         let order_tree = if buy {
             &self.asks
@@ -95,7 +91,7 @@ impl Amm for GigadexOBSwap {
 
         let fees = (amount_out as f64 * (self.fee_mod.base_fee_bp as f64 / 1e4)) as u64;
 
-        amount_out = amount_out - fees;
+        amount_out -= fees;
         let not_enough_liquidity = amount_out == 0;
         let quote = Quote {
             not_enough_liquidity,
@@ -127,11 +123,11 @@ impl Amm for GigadexOBSwap {
             AccountMeta::new(self.market.lot_vault, false),
             AccountMeta::new(self.additional_pda.fee_receiver_wallet, false),
             AccountMeta::new(self.fee_mod.collection_royalty_address, false),
-            AccountMeta::new(get_fee_mod(self.key.into()), false),
-            AccountMeta::new(get_additional_pda(self.key.into()), false),
+            AccountMeta::new(get_fee_mod(self.key), false),
+            AccountMeta::new(get_additional_pda(self.key), false),
             AccountMeta::new(swap_params.user_source_token_account, false),
             AccountMeta::new(swap_params.user_destination_token_account, false),
-            AccountMeta::new(get_market_auth_pda(self.key.into()), false),
+            AccountMeta::new(get_market_auth_pda(self.key), false),
             AccountMeta::new_readonly(Token::id(), false),
             AccountMeta::new_readonly(System::id(), false),
         ].to_vec();

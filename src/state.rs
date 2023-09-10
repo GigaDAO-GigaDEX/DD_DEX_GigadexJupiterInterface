@@ -77,16 +77,14 @@ impl OrderTree {
                     root_idx =
                         order_node.left as usize
                 }
+            } else if order_amount > remaining_amount {
+                total_received += remaining_amount * best_price;
+                break;
             } else {
-                if order_amount > remaining_amount {
-                    total_received += remaining_amount * best_price;
-                    break;
-                } else {
-                    total_received += order_amount * best_price;
-                    remaining_amount -= order_amount;
-                    root_idx =
-                        order_node.right as usize
-                }
+                total_received += order_amount * best_price;
+                remaining_amount -= order_amount;
+                root_idx =
+                    order_node.right as usize
             }
         }
 
